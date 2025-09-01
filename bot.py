@@ -1,5 +1,6 @@
 import logging
 import os
+import random
 from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
@@ -42,7 +43,7 @@ SUPPORT_MESSAGE = (
 
 SUPPORT_LINK = "https://cfxgtivu.mychariow.com/prd_ziljzn"
 
-# Statistiques du bot (en mémoire, pour une solution persistante utilisez une base de données)
+# Statistiques du bot
 bot_stats = {
     'total_users': 0,
     'active_today': 0,
@@ -77,7 +78,13 @@ def update_user_stats(user_id):
     
     users[user_id]['request_count'] += 1
     bot_stats['requests_today'] += 1
-    bot_stats['active_today'] = len([u for u in users if (datetime.now() - users[u]['last_seen']).days < 1])
+    
+    # Compter les utilisateurs actifs aujourd'hui
+    active_users = 0
+    for user in users.values():
+        if (datetime.now() - user['last_seen']).days < 1:
+            active_users += 1
+    bot_stats['active_today'] = active_users
 
 def start(update: Update, context: CallbackContext) -> None:
     """Message de bienvenue avec bouton de soutien"""
@@ -171,12 +178,14 @@ def stats_command(update: Update, context: CallbackContext) -> None:
     update_user_stats(user_id)
     reset_daily_stats()
     
+    total_requests = sum(user['request_count'] for user in users.values())
+    
     stats_text = (
         "📊 *Statistiques du bot ngolu*\n\n"
         f"👥 Utilisateurs totaux: {bot_stats['total_users']}\n"
         f"🔥 Actifs aujourd'hui: {bot_stats['active_today']}\n"
         f"📨 Requêtes aujourd'hui: {bot_stats['requests_today']}\n"
-        f"📞 Requêtes totales: {sum(user['request_count'] for user in users.values())}\n\n"
+        f"📞 Requêtes totales: {total_requests}\n\n"
         f"🔄 Dernière réinitialisation: {bot_stats['last_reset']}"
     )
     
@@ -223,7 +232,7 @@ def handle_message(update: Update, context: CallbackContext) -> None:
     
     # Ignorer les messages trop courts
     if len(user_message.strip()) < 3:
-        update.message.reply_text("❌ Votre message est trop court. Veuillez partager plus de détails pour que je puisse vous aider.")
+        update.message.reply_text("❌ Votre message est trop court. Veuillez share plus de détails pour que je puisse vous aider.")
         return
     
     # Indiquer que le bot est en train de réfléchir
@@ -242,7 +251,6 @@ def handle_message(update: Update, context: CallbackContext) -> None:
         )
         
         # Envoyer le message de soutien après la réponse (25% du temps)
-        import random
         if random.random() < 0.25:
             keyboard = [[InlineKeyboardButton("📖 Recevoir l'ebook spirituel", url=SUPPORT_LINK)]]
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -291,112 +299,6 @@ def main() -> None:
     # Démarrer le bot
     updater.start_polling()
     logger.info("🤖 Bot ngolu démarré avec succès!")
-    
-    # Garder le bot en marche
-    updater.idle()
-
-if __name__ == '__main__':
-    main()    """Commande d'aide"""
-    help_text = (
-        "📚 *Comment utiliser ce bot :*\n\n"
-        "1. Envoyez-moi votre préoccupation ou question spirituelle\n"
-        "2. Je vous répondrai avec un verset, un conseil et une prière\n"
-        "3. Pour recommencer, envoyez une nouvelle question\n\n"
-        "Commandes disponibles :\n"
-        "/start - Démarrer le bot\n"
-        "/help - Afficher l'aide\n"
-        "/support - Soutenir notre projet"
-    )
-    
-    update.message.reply_text(help_text, parse_mode='Markdown')
-
-def support_command(update: Update, context: CallbackContext) -> None:
-    """Message de soutien"""
-    keyboard = [[InlineKeyboardButton("📖 Obtenir l'ebook spirituel", url=SUPPORT_LINK)]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    update.message.reply_text(
-        SUPPORT_MESSAGE,
-        reply_markup=reply_markup,
-        parse_mode='Markdown'
-    )
-
-def get_guidance(concern: str) -> str:
-    """Obtenir la guidance spirituelle de l'IA"""
-    prompt = f"""
-    Tu es un conseiller spirituel chrétien. Réponds avec ce format précis :
-    
-    1. 📖 *Verset Biblique*
-    [Verset pertinent avec référence]
-    
-    2. 💡 *Conseil Spirituel*
-    [Court conseil pour surmonter l'épreuve]
-    
-    3. 🙏 *Prière Personnalisée*
-    [Prière adaptée à la situation]
-    
-    Préoccupation : "{concern}"
-    """
-    
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=500,
-            temperature=0.7
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        return f"😢 Désolé, une erreur est survenue : {str(e)}"
-
-def handle_message(update: Update, context: CallbackContext) -> None:
-    """Gérer les messages de l'utilisateur"""
-    user_message = update.message.text
-    
-    # Indiquer que le bot est en train de réfléchir
-    typing_msg = update.message.reply_text("💭 Je réfléchis à votre demande...")
-    
-    try:
-        # Obtenir la guidance spirituelle
-        guidance = get_guidance(user_message)
-        
-        # Mettre à jour le message avec la réponse
-        typing_msg.edit_text(guidance, parse_mode='Markdown')
-        
-        # Envoyer le message de soutien après la réponse (30% du temps)
-        import random
-        if random.random() < 0.3:  # 30% de chance
-            keyboard = [[InlineKeyboardButton("📖 Obtenir l'ebook spirituel", url=SUPPORT_LINK)]]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            update.message.reply_text(
-                SUPPORT_MESSAGE,
-                reply_markup=reply_markup,
-                parse_mode='Markdown'
-            )
-            
-    except Exception as e:
-        logger.error(f"Erreur : {e}")
-        typing_msg.edit_text("😢 Une erreur est survenue. Veuillez réessayer plus tard.")
-
-def main() -> None:
-    """Fonction principale"""
-    token = os.getenv("TELEGRAM_BOT_TOKEN")
-    if not token:
-        logger.error("TELEGRAM_BOT_TOKEN manquant dans les variables d'environnement")
-        return
-        
-    updater = Updater(token)
-    dp = updater.dispatcher
-    
-    # Enregistrer les gestionnaires
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("help", help_command))
-    dp.add_handler(CommandHandler("support", support_command))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
-    
-    # Démarrer le bot
-    updater.start_polling()
-    logger.info("Bot démarré avec succès!")
     
     # Garder le bot en marche
     updater.idle()
