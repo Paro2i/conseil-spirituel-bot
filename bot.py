@@ -5,6 +5,15 @@ import openai
 import os
 from dotenv import load_dotenv
 
+# Gestion de l'import imghdr avec fallback
+try:
+    import imghdr
+except ImportError:
+    # Si imghdr n'est pas disponible, définir une fonction vide
+    def imghdr_what(file):
+        return None
+    imghdr = type('imghdr', (object,), {'what': imghdr_what})
+
 # Charger les variables d'environnement
 load_dotenv()
 
