@@ -2,8 +2,7 @@ import logging
 import os
 import random
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes
-from telegram.ext import filters
+from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 import openai
 from dotenv import load_dotenv
 
@@ -28,7 +27,8 @@ if not TELEGRAM_BOT_TOKEN:
     logger.error("TELEGRAM_BOT_TOKEN manquant dans les variables d'environnement")
 
 # Configuration OpenAI
-openai.api_key = OPENAI_API_KEY
+from openai import OpenAI
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Messages constants
 SUPPORT_MESSAGE = (
@@ -41,7 +41,7 @@ SUPPORT_MESSAGE = (
     "👉 Cliquez sur le bouton ci-dessous pour recevoir votre ebook."
 )
 
-SUPPORT_LINK = "https://cfxgtivu.mychariow.com/prd_ziljzn"
+SUPPORT_LINK = "https://cfxgtivu.mychariow.com/prd_ziljzn "
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Message de bienvenue avec bouton de soutien"""
@@ -114,7 +114,7 @@ def get_guidance(concern: str) -> str:
         "📖 *VERSET BIBLIQUE*\n"
         "[Un verset biblique pertinent avec référence complète]\n\n"
         "💡 *CONSEIL SPIRITUEL*\n"
-        "[Un conseil pratique et encourageant pour surmonter cette épreuve, basé sur la sagesse chrétienne]\n\n"
+        "[Un conseil pratique et encourageant pour surmonter cette épreuve, basé sur la samesse chrétienne]\n\n"
         "🙏 *PRIÈRE PERSONNALISÉE*\n"
         "[Une prière adaptée à la situation, qui commence par 'Seigneur' ou 'Père céleste']\n\n"
         f"La préoccupation de l'utilisateur est : \"{concern}\"\n\n"
@@ -122,7 +122,7 @@ def get_guidance(concern: str) -> str:
     )
 
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=600,
