@@ -1,1 +1,1 @@
-versetexpress-guidance spirituelle par ia
+un bot telegram utilisant 'python-telegram-bot 13.7' et 'openai' déployé sur render.
